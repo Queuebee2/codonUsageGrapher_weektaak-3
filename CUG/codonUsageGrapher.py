@@ -1,4 +1,4 @@
-#Author:    Milain Lambers | Queuebee2
+5#Author:    Milain Lambers | Queuebee2
 #Date:      05-03-2018
 version = "0.5"
 
@@ -15,6 +15,8 @@ version = "0.5"
 # changelog
 
 #NEW
+# dont try to open pictures as fasta -_-
+# grapher function for dictionaries
 # and codon2Amino to translate
 # added dictionaries 'emptyData' to keep track of self.codonUsage
 #? 
@@ -32,12 +34,14 @@ version = "0.5"
 #imports
 import os
 from pathlib import Path
+from matplotlib import pyplot as plot
 
 
 #hardcoded globals
 # delimiter = '_'
 #
 pathKeyword = 'sequences'
+graphKeyword = 'messyGraphs'
 recursionDepth = 3
 specialFilenames = ['arabidopsis-thaliana_chr2.fasta',
                     'escherichia-coli_genome.fasta',
@@ -59,12 +63,15 @@ def main(verbosity=False):
     # create objects to hold information
     objectsToGraph = createFastaObjects(availableFastas, 'CDS', specialFilenames)
 
+    graphPath = findUp(graphKeyword)
+    setCWD(graphPath)
     if verbosity:
         print("printing object attributes")
         for o in objectsToGraph:
             print('printing name:',o.name)
             o.printSummary()
             o.createDictionary()
+            o.visualise()
 
 
     print("hopefully I did that right...")
@@ -154,6 +161,8 @@ def createFastaObjects(filesToParse, keyword=None, special=None,delimiter='_' ,v
     createdStuff = [] # list of objects to return
     
     for fastaFilename in filesToParse:
+        if '.png' in fastaFilename:
+            continue
         parts = fastaFilename.strip('.fasta').split(delimiter)
         name = parts[0]
         description = parts[1]
@@ -250,6 +259,41 @@ class Fastafile():
     def printSummary(self):
         print('name:',self.name,'\tdesc:',self.description, '\thasfilename:', str(bool(self.filename)))
 
+    def visualise(self):
+
+        dictionary = self.codonUsage
+        outer_labels =[]
+        inner_labels = []
+        outerPie = []
+        innerPie = []
+
+        for key in sorted(dictionary.keys()):
+            if type(dictionary[key]) == dict:
+                print("Key:",key)
+                for innerKey in sorted(dictionary[key].keys()):
+                    if '_TOTAL' in innerKey:
+                        continue
+                    print("subkey:",innerKey,'\t',dictionary[key][innerKey])
+                    outer_labels.append(innerKey)
+                    outerPie.append(dictionary[key][innerKey])
+
+                    
+                inner_labels.append(key)
+                innerPie.append(dictionary[key][key+'_TOTAL'])
+
+
+
+        plot.pie(outerPie, labels=outer_labels, radius=4, counterclock=False)
+        plot.pie(innerPie, labels=inner_labels, radius=3, counterclock=False)
+        
+        plot.title(self.name+self.description)
+        plot.axis('equal')
+        plot.savefig(self.name+self.description+'.png')
+        plot.show()
+
+
+        print('press a key to stop')
+        b = input()
 
     def createDictionary(self, startCodons=False, stopCodons=False, verbose=False):
         """finds the start of a coding frame by using
