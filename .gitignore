@@ -5,3 +5,5 @@ calctest.py
 /sequences/
 CUG/codon_usage_synonyms_per_aminoacid.py
 CUG/currentModule.py
+*.png
+*.fasta

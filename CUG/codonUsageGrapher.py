@@ -18,7 +18,7 @@ version = "0.5"
 # dont try to open pictures as fasta -_-
 # grapher function for dictionaries
 # and codon2Amino to translate
-# added dictionaries 'emptyData' to keep track of self.codonUsage
+# added dictionaries 'emptyData' to keep track of codonUsage
 #? 
 # pasted dictionaries from  blok2, afvink3 (temporarily?) (U->T)
 # added function:   createFastaobjects
@@ -40,38 +40,49 @@ from matplotlib import pyplot as plot
 #hardcoded globals
 # delimiter = '_'
 #
-pathKeyword = 'sequences'
-graphKeyword = 'messyGraphs'
+pathKeyword = 'weektaak_3_relevant'
+graphKeyword = 'newgraphs'
 recursionDepth = 3
-specialFilenames = ['arabidopsis-thaliana_chr2.fasta',
-                    'escherichia-coli_genome.fasta',
-                    'salmonella-enterica_genome.fasta',
-                    'homo-sapiens_chr12.fasta']
+
                     
 
 def main(verbosity=False):
     """
     """
+    userChoice = input("run automatically? y/n :")
+    if userChoice in 'NNoonnoo':
+        print("please provide the directory path where to-be-analysed sequence fasta files reside")
+        sequencesDir = input()
+    else:
+        sequencesDir= findUp(pathKeyword)
+
+        
     # find fasta files
-    sequencesPath = findUp(pathKeyword)
+    
     print("Found presumable path with sequences")
-    print(sequencesPath)
+    print(sequencesDir)
     spacer()
-    setCWD(sequencesPath)
-    availableFastas =  getFilenames()
+    setCWD(sequencesDir)
+    availableFiles =  getFilenames() # lists files in cwd
 
     # create objects to hold information
-    objectsToGraph = createFastaObjects(availableFastas, 'CDS', specialFilenames)
+    objectsToGraph = createFastaObjects(availableFiles)
 
-    graphPath = findUp(graphKeyword)
-    setCWD(graphPath)
-    if verbosity:
+    """    if verbosity:
         print("printing object attributes")
         for o in objectsToGraph:
             print('printing name:',o.name)
             o.printSummary()
-            o.createDictionary()
-            o.visualise()
+    """      
+
+    for o in objectsToGraph:
+        print('creating codonUsage dicitonary for',o.name)
+        o.readFile()
+        o.makeCodonUsage()
+        print("deleting header-sequence pairs now...")
+        o.cleanup()
+        print('putting together graph...')
+        o.visualise()
 
 
     print("hopefully I did that right...")
@@ -95,8 +106,8 @@ V = G C A (all but T)
 N = A G C T (any)
 """
 
-emptyCodonUsage = {'TOTAL': 0,
-                   'ERRORS':0,
+emptyCodonUsage = {'TOTAL': {'TOTAL_TOTAL':0,'unknownCodon':0},
+                   'ERRORS':{'ERRORS_TOTAL':0},
  'Ala ': {'Ala _TOTAL': 0, 'GCT': 0, 'GCC': 0, 'GCA': 0, 'GCG': 0},
  'Arg': {'Arg_TOTAL': 0, 'CGT': 0, 'CGC': 0, 'CGA': 0, 'CGG': 0, 'AGA': 0, 'AGG': 0},
  'Asn': {'Asn_TOTAL': 0, 'AAT': 0, 'AAC': 0},
@@ -119,6 +130,8 @@ emptyCodonUsage = {'TOTAL': 0,
  'Val': {'Val_TOTAL': 0, 'GTT': 0, 'GTC': 0, 'GTA': 0, 'GTG': 0},
  'Start': {'Start_TOTAL': 0, 'ATG': 0, 'CTG': 0, 'TTG': 0, 'GTG': 0, 'ATT': 0},
  'Stop': {'Stop_TOTAL': 0, 'TAG': 0, 'TGA': 0, 'TAA': 0}}
+    
+
     
 codon2Amino = {'GCT': 'Ala ', 'GCC': 'Ala ',
                'GCA': 'Ala ', 'GCG': 'Ala ',
@@ -148,42 +161,47 @@ codon2Amino = {'GCT': 'Ala ', 'GCC': 'Ala ',
                'GTG': 'Val',
                'TAG': 'Stop', 'TGA': 'Stop', 'TAA': 'Stop'}
 
-
+startCodons = ["ATG" , "CTG" , "TTG" , "GTG" , "ATT"]
+stopCodons = ["TAG" , "TGA" , "TAA"]
         
-def createFastaObjects(filesToParse, keyword=None, special=None,delimiter='_' ,verbose=False,):
+def createFastaObjects(listOfFilepaths, keyword=None, special=None,delimiter='_' ,verbose=False,):
     """
-    args
-        keyword: a keyword that has to be in the name
 
-        special: a list of strings containing exact names (for hardcoding purposes
-        if parsing is too complicated)
-    """
-    createdStuff = [] # list of objects to return
+    changelog
+    - removed most parsing features
+    - change: filesToParse -> listOfFilepaths
+    - deprecated: keyword, special because given directory is assumed to be filled
+      only with correct fastas, so none have to be filtered out
     
-    for fastaFilename in filesToParse:
-        if '.png' in fastaFilename:
-            continue
+    args
+        listOfFilepaths:list - a list with all the paths to files in a given directory
+        
+        (deprecated)keyword: a keyword that has to be in the name
+
+        (deprecated)special: a list of strings containing exact names (for hardcoding purposes
+        if parsing is too complicated)
+
+        delimiter:default= '_' - assumed to be used as separator for name and description
+        of the given filename
+
+
+    """
+    fastaObjects = [] # list of objects to return
+
+    count = 0
+    for fastaFilename in listOfFilepaths:
         parts = fastaFilename.strip('.fasta').split(delimiter)
         name = parts[0]
         description = parts[1]
-        if not keyword:
-            print('creating Fastafile object with name:',name,'\tdesc:',description)
-            fastaObject = Fastafile(name, description, fastaFilename)
-            createdStuff.append(fastaObject)
-        elif keyword in fastaFilename:
-            print('creating Fastafile object with name:',name,'\tdesc:',description)
-            fastaObject = Fastafile(name, description, fastaFilename)
-            createdStuff.append(fastaObject)
-        elif special:
-            if fastaFilename in special:
-                print('creating Fastafile object with name:',name,'\tdesc:',description)
-                fastaObject = Fastafile(name, description, fastaFilename)
-                createdStuff.append(fastaObject)
-        else:
-            if verbose: print("no keyword match with filename, no object.")
+
+        FastaObject = Fastafile(name, description, fastaFilename)
+        count+=1
+        fastaObjects.append(FastaObject)
         
+
+    print('created',str(count),'fasta objects successfully')
     spacer()
-    return createdStuff
+    return fastaObjects  
 
 
 def getFilenames():
@@ -246,45 +264,110 @@ class Fastafile():
         self.description = description
         self.filename = filename
         self.codonUsage = emptyCodonUsage.copy()
+        self.headersParsed = 0
+        self.headersAndSequences = None
 
+    
+    def readFile(self):
+        """ takes a file, returns a dictionary of header:string pairs"""
+        print('creating headers and sequence dict for',self.name)
+        file = open(self.filename, 'r')
+
+        headerSeqDic = dict()
+        header = next(file).strip('\n')
+        sequence = ''
+        headercount = 1
+        linecount = 0
+        for line in file:
+            linecount+=1
+            if linecount % 100000 ==0:
+                print('line '+str(linecount))
+            if line.startswith('>'):
+                headercount+=1
+                headerSeqDic[header] = sequence
+                header = line.strip('\n')
+                sequence = ''
+            else:
+                sequence += line.strip('\n')
+
+        #append last one
+        headerSeqDic[header] = sequence
+
+        print('created',headercount,'header-sequence pairs for',self.name)
+        file.close()
+        self.HeadersParsed = headercount
+        self.headersAndSequences = headerSeqDic
+        
+    def cleanup(self):
+        self.headersAndSequences = None
+        
     def getName(self):
         return self.name
 
     def getDescription(self):
         return self.name
 
+    
     def getFilename(self):
         return self.filename
+
+    def getCodonUsage(self):
+        return self.codonUsage
         
     def printSummary(self):
-        print('name:',self.name,'\tdesc:',self.description, '\thasfilename:', str(bool(self.filename)))
+        print('name:',self.name,'\tdesc:',self.description,\
+              '\thasfilename:', str(bool(self.filename)))
 
-    def visualise(self):
+    def visualise(self, graphErrors=True):
+        """ visualises the self.codonUsage with a sunburst diagram
+        args:
+            graphErrors:bool - option to toggle graphing the amount of
+            found errors (unknown codons) alongside the other data
+            """
 
         dictionary = self.codonUsage
+        
         outer_labels =[]
         inner_labels = []
         outerPie = []
         innerPie = []
 
-        for key in sorted(dictionary.keys()):
-            if type(dictionary[key]) == dict:
-                print("Key:",key)
-                for innerKey in sorted(dictionary[key].keys()):
-                    if '_TOTAL' in innerKey:
+        for aminoAcid in sorted(dictionary.keys()):
+            # base cases
+            if aminoAcid == 'TOTAL':
+                continue
+            elif aminoAcid == 'ERRORS':
+                """
+                if graphErrors:
+                    # create error slice with unknown codons
+                    outer_labels.append('unknown Codons')
+                    outerPie.append(dictionary['TOTAL']['unknownCodon'])
+
+                    inner_labels.append("unknown codons")
+                    innerPie.append(dictionary['ERRORS']['ERRORS_TOTAL'])
+                """
+                continue
+            else:
+                for codon in sorted(dictionary[aminoAcid].keys()):
+                    # skip totals, we only use that in the inner piechart.
+                    if '_TOTAL' in codon:
                         continue
-                    print("subkey:",innerKey,'\t',dictionary[key][innerKey])
-                    outer_labels.append(innerKey)
-                    outerPie.append(dictionary[key][innerKey])
+                    print("subkey:",codon,'\t',dictionary[aminoAcid][codon])
 
-                    
-                inner_labels.append(key)
-                innerPie.append(dictionary[key][key+'_TOTAL'])
+                    if dictionary[aminoAcid][codon] >0:
+                    # create outer slice for codon
+                        outer_labels.append(codon)
+                        outerPie.append(dictionary[aminoAcid][codon])
+
+                # create inner pieslice for aminoAcid
+                if dictionary[aminoAcid][aminoAcid+'_TOTAL'] >0:
+                    inner_labels.append(aminoAcid)
+                    innerPie.append(dictionary[aminoAcid][aminoAcid+'_TOTAL'])
 
 
 
-        plot.pie(outerPie, labels=outer_labels, radius=4, counterclock=False)
-        plot.pie(innerPie, labels=inner_labels, radius=3, counterclock=False)
+        plot.pie(outerPie, labels=outer_labels, radius=10,labeldistance=0.8, counterclock=False, rotatelabels=True)
+        plot.pie(innerPie, labels=inner_labels, radius=7, labeldistance=0.7,counterclock=False, rotatelabels=True)
         
         plot.title(self.name+self.description)
         plot.axis('equal')
@@ -292,145 +375,108 @@ class Fastafile():
         plot.show()
 
 
-        print('press a key to stop')
-        b = input()
 
-    def createDictionary(self, startCodons=False, stopCodons=False, verbose=False):
-        """finds the start of a coding frame by using
-        the sliding window algorithm until it finds the index
-        of the first start codon and then creates a dictionary with
-        total:count and aminoacid:{total:count,codonsynonym:count} key-value pairs
+    def makeCodonUsage(self):
+        for header, sequence in self.headersAndSequences.items():
+            print('complementing dictionary with',header[:15])
+            self.createDictionary(sequence)
 
-        changelog
+    def findStart(self, string, verbose=True):
+        """ finds the first startcodon in the whole string that
+        defines the reading frame, from a list of possible startcodons
 
-        args
+        Args:
+            string: the string to parse
 
-            sequenceFile: iOtextwrapper object of a fasta format
-            DNA coding sequence.
+        returns:
+            index of startcodon
 
-            startcodons(default=False) bool/list: list of used
-            codons to filter by for the start of the frame.
-                False: uses all known startcodons
+        """
+        first = -1
+        for codon in startCodons:
+            index = string.find(codon)
+            if verbose: print(codon, first, index)
+            if index < first and (index != -1):
+                first = index
+                foundCodon = codon
+            elif (first == -1) and (index > -1):
+                first = index
+                foundCodon = codon
 
-            stopcodons(default=False) bool/list: list of used
-            codons to filter by for finding the end of the frame.
-                False: uses all known startcodons
-
-        returns
-
-        errors
+        if index != -1:
+            print('found startcodon', foundCodon,'at pos',index)
+            print('that looks like this')
+            print(string[:index+4])
+            return index, codon
+        else:
+            print('no startcodon found')
+            return -1, 'NAN'
+            
+    def createDictionary(self, string, verbose=False):
+        """
         
-        """    
-        # set defaults if none given
-        if not startCodons:
-            startCodons = ["ATG" , "CTG" , "TTG" , "GTG" , "ATT"]
-        if not stopCodons:
-            stopCodons = ["TAG" , "TGA" , "TAA"]
+        """
+        
+        
+        startindex, startCodon = self.findStart(string)
 
-        file = open(self.filename, 'r')
+        if startindex != -1:
+            print("this sequence starts with",startCodon,'at', startindex)
+            #nvm counting them makes the graph obnoxious!
+            #aminoacid = codon2Amino[startCodon]
+            #self.codonUsage[aminoacid][aminoacid+'_TOTAL'] +=1
+            #self.codonUsage[aminoacid][startCodon] +=1
+        else:
+            print("No readingframe found, cause: lack of starcodon")
+            return {'ERROR':{'ERROR':1000000}}
 
-        def findStart(string):
-            first = -1
-            for codon in startCodons:
-                index = string.find(codon)
-                print(codon, first, index)
-                if index < first and (index != -1):
-                    first = index
-                elif (first == -1) and (index > -1):
-                    first = index
-
-            print('smallest index', first)
-            return first
-
-        def isStopCodon(codon):
+        
+        for i in range(startindex+3, len(string)-2, 3):
+            codon = string[i:i+3]
             if codon in stopCodons:
-                print("stopcodon found", codon)
-                return True
-      
+                #self.codonUsage['Stop'][codon] += 1
+                #self.codonUsage['Stop']['Stop_TOTAL'] += 1
+                #self.codonUsage['TOTAL']['TOTAL_TOTAL'] +=1
+                print('found stopcodon',codon,'at',str(i))
+                break
+            else:
+                try:
+                    # normal case
 
-        self.codonUsage = emptyCodonUsage.copy()
+                    aminoacid = codon2Amino[codon]
+                    self.codonUsage[aminoacid][aminoacid+'_TOTAL'] += 1
+                    self.codonUsage[aminoacid][codon] += 1
+                    self.codonUsage['TOTAL']['TOTAL_TOTAL'] += 1
 
-        headersCounted = 0
-        framesCounted = 0
-        prevline = next(file)
-        frameFound = False
-
-        # no clue if the frame is correct at this point.
-        for line in file:
-            
-            line = line.strip() # remove '\n'
-            
-            if verbose: print(line)
-
-            # find a Frame
-            if not frameFound:
-                if prevline.startswith('>'):
-                    headersCounted+=1
-                    print("found header #"+str(headersCounted))
-                    prevline=line
-                else:
-                    window = prevline+line[:2]
-                    frameStart = findStart(window)
-                    if frameStart > -1:
-                        startCodon = window[frameStart] + window[frameStart+1] + window[frameStart+2]
-                        framesCounted +=1
-                        print('found frame #'+str(framesCounted)+' with frameStart matching',startCodon,'at',frameStart)
-                        frameshift = frameStart % 3
-                        frameFound = True
-                    # finish this by starting to count
-                    for n in range(frameStart, len(window)-2, 3):
-                        codon = codon = window[n]+window[n+1]+window[n+2]
-                        if isStopCodon(codon):
-                            frameFound = False
-                        else:
-                            try:
-                                if 'N' in codon:
-                                    self.codonUsage['TOTAL'] += 1
-                                else:
-                                    if verbose: print(codon)
-                                    aminoacid = codon2Amino[codon]
-                                    if verbose: print(aminoacid)
-                                    self.codonUsage[aminoacid][aminoacid+'_TOTAL'] += 1
-                                    self.codonUsage[aminoacid][codon] += 1
-                                    self.codonUsage['TOTAL'] += 1
-                            except KeyError:
-                                self.codonUsage['TOTAL']+=1
-                                self.codonUsage['ERRORS']+=1
-                                print(codon,'gave error')
-                            
-                            
-                        if verbose: print('vprint codon1:', codon, n)
-                    prevline = line
+                # unknown letter case
+                except KeyError:
+                    self.codonUsage['ERRORS']['ERRORS_TOTAL'] +=1
+                    self.codonUsage['TOTAL']['unknownCodon'] +=1
+                    self.codonUsage['TOTAL']['TOTAL_TOTAL'] +=1
+                    print(codon,'at', str(i), 'gave error')
+                    continue
                     
-            # if frame found
-            elif frameFound:
-                if not line.startswith('>'):
-                    window = prevline+line[:2]
-                    for i in range(0+frameshift, len(window)-2,3):
-                        codon = window[i]+window[i+1]+window[i+2]
-                        if verbose: print('vprint codon2:',codon, i)
-                        try:
-                            if 'N' in codon:
-                                self.codonUsage['TOTAL'] += 1
-                            else:
-                                if verbose: print(codon)
-                                aminoacid = codon2Amino[codon]
-                                if verbose: print(aminoacid)
-                                self.codonUsage[aminoacid][aminoacid+'_TOTAL'] += 1
-                                self.codonUsage[aminoacid][codon] += 1
-                                self.codonUsage['TOTAL'] += 1
-                        except KeyError:
-                            self.codonUsage['ERRORS']+=1
-                            self.codonUsage['TOTAL']+=1
-                            print(codon,'gave error')
-                    prevline = line
+        print("Finished counting")
+
+        # count totals to check if it is right
+
+        foundTotal = self.codonUsage['TOTAL']['TOTAL_TOTAL']
+        calcTotals = 0
+        calcCodons = 0
+        for key, value in self.codonUsage.items():
+            for subkey, subvalue in value.items():
+                if 'TOTAL' in subkey:
+                    if subkey != 'TOTAL_TOTAL':
+                        calcTotals += subvalue
                 
                 else:
-                    frameFound = False
-                    prevline = line
-
-        print("codon usage for",self.filename)     
-        print(self.codonUsage)
+                    calcCodons += subvalue
+        print("Totals of each: ",end='')
+        print(foundTotal, calcTotals, calcCodons)
+        if foundTotal == calcTotals and calcTotals == calcCodons:
+            print("It seems like it all counts up!")
+            
+        return self.codonUsage
 
 
 
