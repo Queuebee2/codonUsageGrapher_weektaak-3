@@ -25,6 +25,10 @@ how to find them.
 	- amount of errorrs/unknown codons
                   
 #### hard-coded values 
-Since this is just a simple script, some values are hard-coded. some can be found at the top of the script under #hardcoded. The following features are (still) hard-coded:
+Since this is just a simple script, some values are hard-coded. some can be found at the top of the script under #hardcoded. The following variables/features are (still) hard-coded:
 
-```files```
+```files``` - just a list with filenames
+
+#### known bugs
+- overlapping labels when counted values are relatively small
+
