@@ -1,37 +1,42 @@
-#rewriting the code with a different attac.
+#weektaak_3-blok_3
 
-#hardcoded name for test purposes
-
+#IMPORTS
 import os
 from pathlib import Path
 from matplotlib import pyplot as plot
 
+#HARDCODES
+###############################################################################
 fastaname = 'deprecated'
 files = ['SIVmnd2_CDS.fasta']
 
 def main(verbose=True):
     """ criss cross bonanza"""
 
+
+    # for each file in a list of filenames
     for filename in files:
         print("analysing",filename)
+
+        # create a header:sequence dict
         headerSeqPairs = readFile(filename)
         print("made headers-seq dict ",end='')
         codonUsage = emptyCodonUsage.copy()
         print("counting codons...")
+
+        # for each header:sequence, analyse the sequence, adding to the dictionary of counts.
         for header, seqString in headerSeqPairs.items():
             codonUsage = getCodonUsage(seqString, codonUsage)
 
         print("graphing dictionary for",filename)
+
+        #finally, visualise the dictionary
         visualise(codonUsage)
 
-    # get filenames (read path)
-    # list filenames
-    # create object for each filename (each organism)
-    # create all header-
 
 
 
-def Fastafile():
+def Fastafile(): # deprecated
     """ an object"""
     def __init__(self, name):
         self.name = name
@@ -64,6 +69,8 @@ def readFile(filename):
     
     return headerSeqDic
 
+
+# aminoacid:codon:count mapping
 emptyCodonUsage = {'TOTAL': {'TOTAL_TOTAL':0,'unknownCodon':0},
                    'ERRORS':{'ERRORS_TOTAL':0},
  'Ala ': {'Ala _TOTAL': 0, 'GCT': 0, 'GCC': 0, 'GCA': 0, 'GCG': 0},
@@ -88,7 +95,9 @@ emptyCodonUsage = {'TOTAL': {'TOTAL_TOTAL':0,'unknownCodon':0},
  'Val': {'Val_TOTAL': 0, 'GTT': 0, 'GTC': 0, 'GTA': 0, 'GTG': 0},
  'Start': {'Start_TOTAL': 0, 'ATG': 0, 'CTG': 0, 'TTG': 0, 'GTG': 0, 'ATT': 0},
  'Stop': {'Stop_TOTAL': 0, 'TAG': 0, 'TGA': 0, 'TAA': 0}}
-    
+
+
+# translation dictionary
 codon2Amino = {'GCT': 'Ala ', 'GCC': 'Ala ',
                'GCA': 'Ala ', 'GCG': 'Ala ',
                'CGT': 'Arg', 'CGC': 'Arg', 'CGA': 'Arg',
@@ -116,6 +125,7 @@ codon2Amino = {'GCT': 'Ala ', 'GCC': 'Ala ',
                'GTC': 'Val', 'GTA': 'Val',
                'GTG': 'Val',
                'TAG': 'Stop', 'TGA': 'Stop', 'TAA': 'Stop'}
+
 
 startCodons = ["ATG" , "CTG" , "TTG" , "GTG" , "ATT"]
 stopCodons = ["TAG" , "TGA" , "TAA"]
@@ -147,12 +157,20 @@ def findStart(string, verbose=True):
             
 
 def getCodonUsage(string, dictionary):
-    """ searches for the reading frame by finding a startCodon
-    keeps iterating over each following codon until a stopcodon is found
-    or the end of the line is reached
-    while iterating, keeps a dictionary with counts for each aminoacid and
-    codon
-    returns a dictionary with {AminoAcid:{Codon:Count}} nested dictionaries
+    """ iterates over the readingframe within a string counting all
+    slices of 3 letters, assuming they are codons within reading frame
+
+    Args
+        string - the string to analyse
+
+        dicitonary - the dictionary in which to keep the counts
+
+    returns
+        an updated dictionary
+        
+    errors
+        Keyerror - when a key does not exist, add one to the 'ERROR' placeholder
+        counter.
     """
 
     codonUsage = dictionary
@@ -166,7 +184,7 @@ def getCodonUsage(string, dictionary):
         codonUsage[aminoacid][startCodon] +=1
     else:
         print("No readingframe found, cause: lack of starcodon")
-        return {'ERROR':{'ERROR':1000000}}
+        return {'ERRORS':{'ERRORS_TOTAL':10000000000}} # this is to indicate horrible failures
 
     
     for i in range(startindex+3, len(string)-2, 3):
@@ -216,11 +234,14 @@ def getCodonUsage(string, dictionary):
             
     
     
-def visualise(dictionary,graphErrors=True):
+def visualise(dictionary,graphErrors=False):
         """ visualises the self.codonUsage with a sunburst diagram
+        codons in the outer layer, accompanying the aminoacid they code for
         args:
             graphErrors:bool - option to toggle graphing the amount of
             found errors (unknown codons) alongside the other data
+
+        
             """
         
         outer_labels =[]
