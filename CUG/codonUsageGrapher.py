@@ -190,6 +190,9 @@ def createFastaObjects(listOfFilepaths, keyword=None, special=None,delimiter='_'
 
     count = 0
     for fastaFilename in listOfFilepaths:
+        #skip pngs
+        if '.png' in fastaFilename:
+            continue
         parts = fastaFilename.strip('.fasta').split(delimiter)
         name = parts[0]
         description = parts[1]
