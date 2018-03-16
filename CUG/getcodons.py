@@ -2,23 +2,44 @@
 
 #hardcoded name for test purposes
 
-fastaname = 'SIVmnd2_CDS.fasta'
+import os
+from pathlib import Path
+from matplotlib import pyplot as plot
+
+fastaname = 'deprecated'
+files = ['SIVmnd2_CDS.fasta']
 
 def main(verbose=True):
     """ criss cross bonanza"""
 
-    headerSeqPairs = readFile(fastaname)
-    if verbose:
+    for filename in files:
+        print("analysing",filename)
+        headerSeqPairs = readFile(filename)
+        print("made headers-seq dict ",end='')
+        codonUsage = emptyCodonUsage.copy()
+        print("counting codons...")
         for header, seqString in headerSeqPairs.items():
-            print(header[:10], seqString[:10])
-            codonUsage = getCodons(seqString)
+            codonUsage = getCodonUsage(seqString, codonUsage)
 
+        print("graphing dictionary for",filename)
+        visualise(codonUsage)
 
     # get filenames (read path)
     # list filenames
     # create object for each filename (each organism)
     # create all header-
 
+
+
+def Fastafile():
+    """ an object"""
+    def __init__(self, name):
+        self.name = name
+        self.codonUsage = emptyCodonUsage.copy()
+        self.filename = None
+
+    def setFilename(self, filename):
+        self.filename = filename
 
 
 def readFile(filename):
@@ -131,7 +152,7 @@ def findStart(string, verbose=True):
         return -1, 'NAN'
             
 
-def getCodonUsage(self, string):
+def getCodonUsage(string, dictionary):
     """ searches for the reading frame by finding a startCodon
     keeps iterating over each following codon until a stopcodon is found
     or the end of the line is reached
@@ -139,7 +160,8 @@ def getCodonUsage(self, string):
     codon
     returns a dictionary with {AminoAcid:{Codon:Count}} nested dictionaries
     """
-    
+
+    codonUsage = dictionary
     
     startindex, startCodon = findStart(string)
 
@@ -164,11 +186,10 @@ def getCodonUsage(self, string):
         else:
             try:
                 # normal case
-                else:
-                    aminoacid = codon2Amino[codon]
-                    codonUsage[aminoacid][aminoacid+'_TOTAL'] += 1
-                    codonUsage[aminoacid][codon] += 1
-                    codonUsage['TOTAL']['TOTAL_TOTAL'] += 1
+                aminoacid = codon2Amino[codon]
+                codonUsage[aminoacid][aminoacid+'_TOTAL'] += 1
+                codonUsage[aminoacid][codon] += 1
+                codonUsage['TOTAL']['TOTAL_TOTAL'] += 1
 
             # unknown letter case
             except KeyError:
@@ -193,7 +214,7 @@ def getCodonUsage(self, string):
             
             else:
                 calcCodons += subvalue
-    print("Totals of each: "end='')
+    print("Totals of each: ",end='')
     print(foundTotal, calcTotals, calcCodons)
     if foundTotal == calcTotals and calcTotals == calcCodons:
         print("It seems like it all counts up!")
@@ -201,6 +222,61 @@ def getCodonUsage(self, string):
             
     
     
+def visualise(dictionary,graphErrors=True):
+        """ visualises the self.codonUsage with a sunburst diagram
+        args:
+            graphErrors:bool - option to toggle graphing the amount of
+            found errors (unknown codons) alongside the other data
+            """
+        
+        outer_labels =[]
+        inner_labels = []
+        outerPie = []
+        innerPie = []
+
+        for aminoAcid in sorted(dictionary.keys()):
+            # base cases
+            if aminoAcid == 'TOTAL':
+                continue
+            elif aminoAcid == 'ERRORS':
+                """
+                if graphErrors:
+                    # create error slice with unknown codons
+                    outer_labels.append('unknown Codons')
+                    outerPie.append(dictionary['TOTAL']['unknownCodon'])
+
+                    inner_labels.append("unknown codons")
+                    innerPie.append(dictionary['ERRORS']['ERRORS_TOTAL'])
+                """
+                continue
+            else:
+                for codon in sorted(dictionary[aminoAcid].keys()):
+                    # skip totals, we only use that in the inner piechart.
+                    if '_TOTAL' in codon:
+                        continue
+                    #print("subkey:",codon,'\t',dictionary[aminoAcid][codon])
+
+                    if dictionary[aminoAcid][codon] >0:
+                    # create outer slice for codon
+                        outer_labels.append(codon)
+                        outerPie.append(dictionary[aminoAcid][codon])
+
+                # create inner pieslice for aminoAcid
+                if dictionary[aminoAcid][aminoAcid+'_TOTAL'] >0:
+                    inner_labels.append(aminoAcid)
+                    innerPie.append(dictionary[aminoAcid][aminoAcid+'_TOTAL'])
+
+
+
+        plot.pie(outerPie, labels=outer_labels, radius=10,labeldistance=0.8, counterclock=False, rotatelabels=True)
+        plot.pie(innerPie, labels=inner_labels, radius=7, labeldistance=0.7,counterclock=False, rotatelabels=True)
+        
+        plot.title('test')
+        plot.axis('equal')
+        plot.savefig('test'+'test'+'.png')
+        plot.show()
+
+
 
 if __name__ == '__main__':
     print("running from main")
