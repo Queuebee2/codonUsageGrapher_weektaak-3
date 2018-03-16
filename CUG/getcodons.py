@@ -131,25 +131,19 @@ def findStart(string, verbose=True):
         index of startcodon
 
     """
-    first = -1
+    startIndex = -1
+    startCodon = -1
     for codon in startCodons:
         index = string.find(codon)
-        if verbose: print(codon, first, index)
-        if index < first and (index != -1):
-            first = index
-            foundCodon = codon
-        elif (first == -1) and (index > -1):
-            first = index
-            foundCodon = codon
+        if index > 0:
+            print("Found", codon, 'at', index)
+            if index < startIndex or startIndex == -1:
+                startIndex = index
+                startCodon = codon
+        
 
-    if index != -1:
-        print('found startcodon', foundCodon,'at pos',index)
-        print('that looks like this')
-        print(string[:index+4])
-        return index, codon
-    else:
-        print('no startcodon found')
-        return -1, 'NAN'
+    print('found earliest startcodon', startCodon,'at index =', startIndex)
+    return startIndex, startCodon
             
 
 def getCodonUsage(string, dictionary):
