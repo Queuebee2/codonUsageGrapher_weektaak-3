@@ -1,4 +1,4 @@
-5#Author:    Milain Lambers | Queuebee2
+#Author:    Milain Lambers | Queuebee2
 #Date:      05-03-2018
 version = "0.5"
 
@@ -37,7 +37,7 @@ from pathlib import Path
 from matplotlib import pyplot as plot
 
 
-#hardcoded globals
+# hardcoded globals
 # delimiter = '_'
 #
 pathKeyword = 'weektaak_3_relevant'
@@ -194,6 +194,8 @@ def createFastaObjects(listOfFilepaths, keyword=None, special=None,delimiter='_'
         name = parts[0]
         description = parts[1]
 
+        print("creating fastaObject:",end='')
+        print(name, description, fastaFilename)
         FastaObject = Fastafile(name, description, fastaFilename)
         count+=1
         fastaObjects.append(FastaObject)
@@ -381,7 +383,7 @@ class Fastafile():
             print('complementing dictionary with',header[:15])
             self.createDictionary(sequence)
 
-    def findStart(self, string, verbose=True):
+    def findStart(self, string, verbose=True): # deprecated
         """ finds the first startcodon in the whole string that
         defines the reading frame, from a list of possible startcodons
 
@@ -418,10 +420,11 @@ class Fastafile():
         """
         
         
-        startindex, startCodon = self.findStart(string)
+        startindex = string.find('ATG')
+        # only looking for ATG anymore
 
         if startindex != -1:
-            print("this sequence starts with",startCodon,'at', startindex)
+            print("this sequence starts at", startindex)
             #nvm counting them makes the graph obnoxious!
             #aminoacid = codon2Amino[startCodon]
             #self.codonUsage[aminoacid][aminoacid+'_TOTAL'] +=1
@@ -475,7 +478,8 @@ class Fastafile():
         print(foundTotal, calcTotals, calcCodons)
         if foundTotal == calcTotals and calcTotals == calcCodons:
             print("It seems like it all counts up!")
-            
+
+        print(self.codonUsage)
         return self.codonUsage
 
 
